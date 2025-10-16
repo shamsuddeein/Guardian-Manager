@@ -1,66 +1,31 @@
-## Foundry
+# Guardian: A Smart Account Manager for Monad
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**Guardian** is a decentralized application (dApp) built for the MetaMask Smart Accounts x Monad Dev Cook-Off. It provides a user-friendly security dashboard for managing the features of a smart account on the Monad network, focusing on the core principles of account abstraction.
 
-Foundry consists of:
+## Features
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+This hackathon submission focuses on a core, fully-functional MVP:
 
-## Documentation
+* **Guardian Management:** Users can add and remove trusted "guardian" addresses. These guardians are the foundation for social recovery, allowing users to regain access to their accounts if they lose their primary key.
+* **Spending Allowances:** Users can set a daily spending limit (in USD) to protect their account from unauthorized large transactions.
+* **Live on Monad Testnet:** The smart contract is deployed and verified on the Monad Testnet, and the dApp is fully interactive.
+    * **Contract Address:** `0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC`
+    * **Verified Contract on Monad Explorer:** [https://explorer.testnet.monad.xyz/address/0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC](https://explorer.testnet.monad.xyz/address/0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC)
 
-https://book.getfoundry.sh/
+## Tech Stack
 
-## Usage
+* **Smart Contract:** Solidity
+* **Development Framework:** Foundry
+* **Frontend:** HTML, TailwindCSS, vanilla JavaScript
+* **Libraries:** Ethers.js
+* **Blockchain:** Monad Testnet
 
-### Build
+## Getting Started Locally
 
-```shell
-$ forge build
-```
+1.  **Clone the repository.**
+2.  **Run a local server:** Open the `index.html` file through a local server to enable wallet connections. A simple way is to run `python3 -m http.server` in the project directory.
+3.  **Connect your wallet:** Open [http://localhost:8000](http://localhost:8000) in your browser and make sure your wallet is connected to the Monad Testnet.
 
-### Test
+---
 
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+This project demonstrates a practical and user-centric application of account abstraction, built with professional tools and best practices.
