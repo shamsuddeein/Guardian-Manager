@@ -1,432 +1,281 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guardian: Monad Smart Wallet Manager</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guardian Manager V2 | Monad Testnet</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .sidebar-icon { transition: all 0.2s ease-in-out; }
-        .sidebar-link.active, .sidebar-link:hover .sidebar-icon { color: #8A5CF6; }
-        .sidebar-link.active { background-color: rgba(138, 92, 246, 0.1); border-right: 3px solid #8A5CF6; }
-        .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease; }
-        .page { display: none; }
-        .page.active { display: block; }
-        #toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1051; }
-        .toast { transform: translateX(120%); transition: transform 0.5s ease-in-out; }
-        .toast.show { transform: translateX(0); }
-        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #8A5CF6; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+        :root { color-scheme: dark; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #f1f5f9; }
+        .card { @apply bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-lg transition-all duration-300; }
+        .btn { @apply bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-200 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed; }
+        .btn-destructive { @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl transition; }
+        .input { @apply w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition; }
+        #toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1051; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { transform: translateX(120%); transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); opacity: 0; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .loader { border: 4px solid #4a5568; border-top: 4px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .item-removing { opacity: 0; transition: opacity 0.3s ease-out; }
     </style>
 </head>
-
-<body class="bg-gray-900 text-gray-100">
-
-    <div id="toast-container"></div>
-
-    <header id="mobile-header" class="hidden md:hidden flex items-center justify-between p-4 bg-gray-900 border-b border-gray-700/50 sticky top-0 z-40">
-        <div class="flex items-center gap-3">
-             <div class="p-2 bg-violet-500 rounded-lg"><i class="fa-solid fa-shield-halved text-white text-xl"></i></div>
-            <h1 class="text-xl font-bold text-white">Guardian</h1>
+<body class="bg-neutral-950 text-gray-100 min-h-screen flex flex-col items-center antialiased">
+    
+    <!-- Header -->
+    <header class="py-6 text-center w-full max-w-5xl px-6">
+        <h1 class="text-3xl font-bold text-indigo-400">Guardian Manager V2</h1>
+        <p class="text-gray-400 text-sm mt-1">Smart Account Security on Monad Testnet</p>
+        
+        <div id="wallet-info" class="hidden items-center justify-center mt-4 space-x-4">
+            <div class="flex items-center space-x-2 text-sm bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full">
+                <span id="network-status-dot" class="h-2 w-2 rounded-full bg-green-500"></span>
+                <span id="network-status-text" class="text-gray-300">Monad Testnet</span>
+            </div>
+            <span id="wallet-address" class="text-sm font-mono text-gray-400"></span>
+            <button id="disconnect-btn" class="text-xs text-red-400 hover:text-red-300 font-semibold">Disconnect</button>
         </div>
-        <button id="hamburger-btn" class="text-2xl text-gray-300"><i class="fa-solid fa-bars"></i></button>
+        
+        <button id="connectWalletBtn" class="btn mt-4">Connect Wallet</button>
     </header>
 
-    <div id="app" class="hidden">
-        <div class="flex min-h-screen">
-            <aside id="sidebar" class="w-64 bg-gray-900 border-r border-gray-700/50 flex-col p-4 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-50">
-                <div class="flex items-center justify-between md:justify-start gap-3 mb-10 px-2">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-violet-500 rounded-lg"><i class="fa-solid fa-shield-halved text-white text-xl"></i></div>
-                        <h1 class="text-xl font-bold text-white">Guardian</h1>
-                    </div>
-                     <button id="close-sidebar-btn" class="md:hidden text-2xl text-gray-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+    <!-- Main Content (Hidden until connected) -->
+    <main id="app-content" class="w-full max-w-5xl p-6 space-y-8 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="card col-span-1 lg:col-span-2">
+                <h2 class="text-xl font-semibold mb-4">Daily Spending Limit</h2>
+                <div class="relative w-full bg-neutral-800 rounded-full h-4 overflow-hidden border border-neutral-700">
+                    <div id="spend-progress-bar" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
-                <nav class="flex flex-col gap-2">
-                    <a href="#dashboard" class="sidebar-link active flex items-center gap-4 p-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" data-page="dashboard"><i class="fa-solid fa-house w-6 text-center text-lg sidebar-icon"></i><span class="font-medium">Dashboard</span></a>
-                    <a href="#guardians" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" data-page="guardians"><i class="fa-solid fa-users w-6 text-center text-lg sidebar-icon"></i><span class="font-medium">Guardians</span></a>
-                    <a href="#allowances" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors" data-page="allowances"><i class="fa-solid fa-hand-holding-dollar w-6 text-center text-lg sidebar-icon"></i><span class="font-medium">Allowances</span></a>
-                </nav>
-                <div class="mt-auto">
-                    <button id="initiate-recovery-side" class="w-full bg-red-500/20 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-colors font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3"><i class="fa-solid fa-triangle-exclamation"></i><span>Initiate Recovery</span></button>
-                    <div class="mt-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                        <div class="flex justify-between items-center mb-1">
-                            <p class="text-xs text-gray-400">Connected Wallet</p>
-                             <button id="disconnect-btn" class="text-xs text-red-400 hover:text-red-300 font-semibold">Disconnect</button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-wallet text-violet-400"></i>
-                            <p id="wallet-address" class="text-sm font-mono font-medium">0x...</p>
-                        </div>
-                    </div>
+                <div class="flex justify-between items-center mt-2 text-sm text-gray-400">
+                    <span>Spent: <span id="spent-today" class="font-mono">0.0</span> MON</span>
+                    <span>Limit: <span id="allowance-limit" class="font-mono">0.0</span> MON</span>
                 </div>
-            </aside>
-
-            <main class="flex-1 p-4 sm:p-8 overflow-y-auto">
-                <div id="dashboard" class="page active">
-                    <h2 class="text-3xl font-bold mb-2">Security Dashboard</h2>
-                    <p class="text-gray-400 mb-8">An overview of your smart account's security configuration.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-                            <div class="flex items-center gap-4 mb-4"><i class="fa-solid fa-users text-violet-400 text-2xl"></i><h3 class="text-xl font-semibold">Guardians</h3></div>
-                            <p class="text-gray-400 mb-4">You have <span id="guardian-summary" class="font-bold text-violet-400">0 out of 5</span> Guardians configured.</p>
-                            <div class="w-full bg-gray-700 rounded-full h-2.5"><div id="guardian-progress" class="bg-violet-500 h-2.5 rounded-full" style="width: 0%"></div></div>
-                             <button id="manage-guardians-btn" class="mt-6 w-full text-center bg-violet-500 hover:bg-violet-600 transition-colors font-bold py-2 px-4 rounded-lg">Manage Guardians</button>
-                        </div>
-                        <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-                            <div class="flex items-center gap-4 mb-4"><i class="fa-solid fa-hand-holding-dollar text-green-400 text-2xl"></i><h3 class="text-xl font-semibold">Allowances</h3></div>
-                            <p class="text-gray-400 mb-4">Your daily spending limit is set to <span id="allowance-summary" class="font-bold text-green-400">$0.00</span>.</p>
-                            <p class="text-gray-400 text-sm">Transactions over this limit will require Guardian approval.</p>
-                            <button id="manage-allowance-btn" class="mt-6 w-full text-center bg-green-500/80 hover:bg-green-600/80 transition-colors font-bold py-2 px-4 rounded-lg">Adjust Limit</button>
-                        </div>
-                        <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-                            <div class="flex items-center gap-4 mb-4"><i class="fa-solid fa-coins text-yellow-400 text-2xl"></i><h3 class="text-xl font-semibold">Balance</h3></div>
-                            <p class="text-gray-400 text-lg font-mono"><span id="wallet-balance">--</span> MON</p>
-                        </div>
-                    </div>
-                </div>
-                <div id="guardians" class="page">
-                    <h2 class="text-3xl font-bold mb-2">Manage Guardians</h2>
-                    <p class="text-gray-400 mb-8">Guardians can help you recover your account. You need a majority to approve a recovery request.</p>
-                    <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl">
-                        <div class="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/50">
-                            <div><h3 id="guardian-page-title" class="text-xl font-semibold">Your Guardians (0/5)</h3><p class="text-gray-400 text-sm">You need at least 3 guardians to enable recovery.</p></div>
-                            <button id="open-add-guardian" class="bg-violet-500 w-full sm:w-auto hover:bg-violet-600 transition-colors font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i><span>Add Guardian</span></button>
-                        </div>
-                        <ul id="guardian-list" class="divide-y divide-gray-700/50"></ul>
-                    </div>
-                </div>
-                <div id="allowances" class="page">
-                    <h2 class="text-3xl font-bold mb-2">Spending Allowances</h2>
-                    <p class="text-gray-400 mb-8">Set limits to protect your funds from unauthorized or large transactions.</p>
-                    <div class="max-w-2xl">
-                        <div class="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-                            <h3 class="text-xl font-semibold mb-4">Daily Spending Limit</h3>
-                            <p class="text-gray-400 mb-6">This is the maximum amount (in USD) you can spend in a 24-hour period without Guardian approval.</p>
-                            <div class="mb-4">
-                                <label for="allowance-amount" class="block text-sm font-medium text-gray-300 mb-2">Limit Amount (USD)</label>
-                                <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">$</span><input type="number" id="allowance-amount" class="w-full bg-gray-700 border border-gray-600 rounded-lg pl-7 pr-4 py-2 focus:ring-violet-500 focus:border-violet-500" placeholder="100.00"></div>
-                            </div>
-                            <button id="save-allowance-btn" class="w-full bg-green-500/80 hover:bg-green-600/80 transition-colors font-bold py-3 rounded-lg flex justify-center items-center gap-2">Save New Limit</button>
-                        </div>
-                    </div>
-                </div>
-            </main>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-2">Account Balance</h2>
+                <p class="text-3xl font-mono text-indigo-400"><span id="wallet-balance">--</span> <span class="text-xl">MON</span></p>
+            </div>
         </div>
-    </div>
 
-    <div id="connect-screen" class="flex flex-col items-center justify-center h-screen text-center p-4">
-        <div class="p-6 bg-violet-500 rounded-lg mb-6"><i class="fa-solid fa-shield-halved text-white text-5xl"></i></div>
-        <h1 class="text-4xl font-bold text-white mb-2">Welcome to Guardian</h1>
-        <p class="text-lg text-gray-400 max-w-xl mb-8">Your personal security dashboard for MetaMask Smart Accounts on the Monad Network. Connect your wallet to get started.</p>
-        <button id="connect-wallet-btn" class="bg-violet-500 hover:bg-violet-600 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 flex justify-center items-center gap-3">Connect Wallet</button>
-        <p class="text-sm text-gray-500 mt-8">Make sure you are connected to the Monad Testnet.</p>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Guardian Management</h2>
+                <div class="flex space-x-2"><input id="guardianAddress" type="text" placeholder="Guardian address (0x...)" class="input"><button id="addGuardianBtn" class="btn">Add</button></div>
+                <ul id="guardianList" class="mt-4 space-y-3 text-sm text-gray-300"></ul>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Set Daily Allowance</h2>
+                <div class="flex space-x-2"><input id="allowanceInput" type="number" placeholder="Amount in MON" class="input"><button id="setAllowanceBtn" class="btn">Set</button></div>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Execute Spend</h2>
+                <div class="space-y-3"><input id="spendTo" type="text" placeholder="Recipient (0x...)" class="input"><input id="spendAmount" type="number" placeholder="Amount in MON" class="input"><button id="spendBtn" class="btn w-full">Send MON</button></div>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Social Recovery</h2>
+                <div id="recovery-status-panel" class="p-4 rounded-lg bg-neutral-800/50 border border-neutral-700 text-center mb-4">
+                    <p class="font-semibold text-lg"><span id="recovery-votes">0</span> / 3 Votes</p>
+                    <p class="text-xs text-gray-400">Required for recovery</p>
+                    <p id="proposed-owner-text" class="text-xs mt-2 text-indigo-400 font-mono hidden"></p>
+                </div>
+                <div class="space-y-3"><input id="recoveryAddress" type="text" placeholder="Proposed new owner (0x...)" class="input"><button id="voteRecoveryBtn" class="btn w-full">Vote for Recovery</button><button id="cancelRecoveryBtn" class="btn-destructive w-full">Cancel Recovery</button></div>
+            </div>
+        </div>
+    </main>
 
     <!-- Modals -->
-    <div id="addGuardianModal" class="fixed inset-0 z-[1050] hidden items-center justify-center p-4">
-        <div class="modal-backdrop fixed inset-0" onclick="hideModal('addGuardianModal')"></div>
-        <div class="modal-content bg-gray-800 rounded-xl shadow-lg w-full max-w-md transform scale-95 opacity-0">
-            <div class="p-6 border-b border-gray-700"><h3 class="text-xl font-semibold">Add New Guardian</h3></div>
-            <div class="p-6">
-                <p class="text-gray-400 mb-4">Enter the Monad address of the guardian. They will not have access to your funds, but can help with account recovery.</p>
-                <div><label for="guardian-address-input" class="block text-sm font-medium text-gray-300 mb-2">Guardian Address</label><input type="text" id="guardian-address-input" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 font-mono focus:ring-violet-500 focus:border-violet-500" placeholder="0x..."></div>
-            </div>
-            <div class="p-6 bg-gray-800/50 border-t border-gray-700 flex justify-end gap-4 rounded-b-xl"><button id="cancel-add-guardian" class="bg-gray-600 hover:bg-gray-500 font-bold py-2 px-4 rounded-lg">Cancel</button><button id="add-guardian-btn" class="bg-violet-500 hover:bg-violet-600 font-bold py-2 px-4 rounded-lg flex justify-center items-center gap-2">Add Guardian</button></div>
+    <div id="toast-container"></div>
+    <div id="tx-status" class="fixed inset-0 z-[1200] hidden items-center justify-center bg-black/60 backdrop-blur-sm"><div class="bg-gray-800 p-8 rounded-xl text-center shadow-2xl flex flex-col items-center"><div class="loader mb-4"></div><p class="text-gray-300 font-medium" id="tx-status-text">Processing...</p></div></div>
+    <div id="select-wallet-modal" class="fixed inset-0 z-[1100] hidden items-center justify-center bg-black/60 backdrop-blur-sm"><div class="card max-w-sm w-full"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">Select Wallet</h3><button id="close-wallet-modal" class="text-gray-400 text-2xl">&times;</button></div><div id="wallet-list" class="space-y-2"></div></div></div>
+    <div id="wrongNetworkModal" class="fixed inset-0 z-[1050] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="card max-w-md w-full">
+            <div class="flex items-center gap-4"><i class="fa-solid fa-wifi text-yellow-400 text-2xl"></i><h3 class="text-xl font-semibold">Wrong Network</h3></div>
+            <p class="text-gray-400 my-4">This dApp only runs on the Monad Testnet. Please switch your wallet to the correct network.</p>
+            <button id="switch-network-btn" class="btn w-full">Switch to Monad Testnet</button>
         </div>
-    </div>
-    
-    <div id="initiateRecoveryModal" class="fixed inset-0 z-[1050] hidden items-center justify-center p-4">
-        <div class="modal-backdrop fixed inset-0" onclick="hideModal('initiateRecoveryModal')"></div>
-        <div class="modal-content bg-gray-800 rounded-xl shadow-lg w-full max-w-md transform scale-95 opacity-0">
-            <div class="p-6 border-b border-gray-700 flex items-center gap-4"><i class="fa-solid fa-triangle-exclamation text-red-400 text-2xl"></i><h3 class="text-xl font-semibold">Initiate Account Recovery</h3></div>
-            <div class="p-6">
-                <p class="text-gray-400 mb-4">This feature is not yet implemented for the hackathon. In a full version, you would enter your lost account and new owner address here.</p>
-                 <p class="text-xs text-yellow-400/80 mt-4 bg-yellow-400/10 p-3 rounded-lg border border-yellow-400/20">After initiating, you must contact your Guardians to have them approve the recovery request from their own wallets.</p>
-            </div>
-            <div class="p-6 bg-gray-800/50 border-t border-gray-700 flex justify-end gap-4 rounded-b-xl"><button class="bg-gray-600 hover:bg-gray-500 font-bold py-2 px-4 rounded-lg" onclick="hideModal('initiateRecoveryModal')">Cancel</button><button id="initiate-recovery-btn" class="bg-red-500/80 font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled>Initiate (Soon)</button></div>
-        </div>
-    </div>
-    
-    <div id="wrongNetworkModal" class="fixed inset-0 z-[1050] hidden items-center justify-center p-4">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="modal-content bg-gray-800 rounded-xl shadow-lg w-full max-w-md transform scale-95 opacity-0">
-            <div class="p-6 border-b border-gray-700 flex items-center gap-4"><i class="fa-solid fa-wifi text-yellow-400 text-2xl"></i><h3 class="text-xl font-semibold">Wrong Network</h3></div>
-            <div class="p-6"><p class="text-gray-400 mb-4">Guardian is built for the Monad network. Please switch to the Monad Testnet in your wallet to proceed.</p></div>
-            <div class="p-6 bg-gray-800/50 border-t border-gray-700 flex justify-end gap-4 rounded-b-xl"><button id="switch-network-btn" class="bg-violet-500 hover:bg-violet-600 font-bold py-2 px-4 rounded-lg flex justify-center items-center gap-2">Switch to Monad Testnet</button></div>
-        </div>
-    </div>
-    
-    <div id="selectWalletModal" class="fixed inset-0 z-[1050] hidden items-center justify-center p-4">
-        <div class="modal-backdrop fixed inset-0" onclick="hideModal('selectWalletModal')"></div>
-        <div class="modal-content bg-gray-800 rounded-xl shadow-lg w-full max-w-md transform scale-95 opacity-0">
-            <div class="p-6 border-b border-gray-700 flex items-center justify-between"><h3 class="text-xl font-semibold">Select Wallet</h3><button id="close-select-wallet" class="text-gray-400 hover:text-white">&times;</button></div>
-            <div class="p-6"><ul id="wallet-list" class="flex flex-col gap-2"></ul></div>
-        </div>
-    </div>
-
-    <!-- Transaction status overlay -->
-    <div id="tx-status" class="fixed inset-0 z-[1200] hidden items-center justify-center bg-black/60">
-      <div class="bg-gray-800 p-6 rounded-xl text-center">
-        <div class="loader mx-auto mb-4"></div>
-        <p class="text-gray-300 font-medium" id="tx-status-text">Processing transaction...</p>
-      </div>
     </div>
 
     <script>
-        // --- LIVE CONTRACT CONFIGURATION ---
-        const CONTRACT_ADDRESS = "0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC";
-        const MONAD_TESTNET_CHAIN_ID_HEX = '0x279f'; // 10143 in hex
+        const CONTRACT_ADDRESS = "0xd3310739AF89EceC9EE327C17243C8347e252310";
+        const MONAD_TESTNET_CHAIN_ID_HEX = '0x279f'; // 10143
         const MONAD_TESTNET_CHAIN_ID_DEC = 10143;
-        const MONAD_TESTNET_PARAMS = {
-            chainId: MONAD_TESTNET_CHAIN_ID_HEX,
-            chainName: 'Monad Testnet',
-            nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-            rpcUrls: ['https://testnet-rpc.monad.xyz/'],
-            blockExplorerUrls: ['https://testnet.monadexplorer.com/']
-        };
-        const CONTRACT_ABI = [{"type":"constructor","inputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"addGuardian","inputs":[{"name":"_guardian","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"dailyAllowanceUSD","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"getAllowance","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"getGuardians","inputs":[],"outputs":[{"name":"","type":"address[]","internalType":"address[]"}],"stateMutability":"view"},{"type":"function","name":"guardians","inputs":[{"name":"","type":"uint256","internalType":"uint256"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"isGuardian","inputs":[{"name":"","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"owner","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"removeGuardian","inputs":[{"name":"_guardian","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setAllowance","inputs":[{"name":"_newAllowance","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"event","name":"AllowanceChanged","inputs":[{"name":"newAllowance","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"GuardianAdded","inputs":[{"name":"guardian","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"GuardianRemoved","inputs":[{"name":"guardian","type":"address","indexed":true,"internalType":"address"}],"anonymous":false}];
-
+        const MONAD_TESTNET_PARAMS = { chainId: MONAD_TESTNET_CHAIN_ID_HEX, chainName: 'Monad Testnet', nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 }, rpcUrls: ['https://testnet-rpc.monad.xyz/'], blockExplorerUrls: ['https://testnet.monadexplorer.com/'] };
+        const CONTRACT_ABI = [{"type":"constructor","inputs":[],"stateMutability":"nonpayable"},{"type":"event","name":"AllowanceChanged","inputs":[{"name":"newAllowance","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"GuardianAdded","inputs":[{"name":"guardian","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"GuardianRemoved","inputs":[{"name":"guardian","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"OwnerRecovered","inputs":[{"name":"oldOwner","type":"address","indexed":true,"internalType":"address"},{"name":"newOwner","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"RecoveryCancelled","inputs":[{"name":"cancelledBy","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"RecoveryInitiated","inputs":[{"name":"proposedOwner","type":"address","indexed":true,"internalType":"address"},{"name":"initiator","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"RecoveryVote","inputs":[{"name":"guardian","type":"address","indexed":true,"internalType":"address"},{"name":"proposedOwner","type":"address","indexed":true,"internalType":"address"},{"name":"votes","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"event","name":"SpendExecuted","inputs":[{"name":"to","type":"address","indexed":true,"internalType":"address"},{"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"function","name":"addGuardian","inputs":[{"name":"_guardian","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"approveRecovery","inputs":[{"name":"_newOwner","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"cancelRecovery","inputs":[],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"dailyAllowance","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"getAllowance","outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"getGuardians","outputs":[{"name":"","type":"address[]","internalType":"address[]"}],"stateMutability":"view"},{"type":"function","name":"getProposedNewOwner","outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"getRecoveryVoteCount","outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"getSpentToday","outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"hasVotedFor","inputs":[{"name":"_guardian","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"isGuardian","inputs":[{"name":"","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"lastSpendTimestamp","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"owner","outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"proposedNewOwner","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"recoveryActive","inputs":[],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"recoveryStartedAt","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"recoveryVoteCount","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},{"type":"function","name":"recoveryVotes","inputs":[{"name":"","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"bool","internalType":"bool"}],"stateMutability":"view"},{"type":"function","name":"removeGuardian","inputs":[{"name":"_guardian","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"setAllowance","inputs":[{"name":"_newAllowance","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"spend","inputs":[{"name":"_to","type":"address","internalType":"address payable"},{"name":"_amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"spentToday","inputs":[],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"}];
+        
         let provider, signer, contract, userAddress, selectedProvider;
         let discoveredProviders = [];
-        let currentGuardians = [];
-        const walletListEl = document.getElementById('wallet-list');
-        const connectWalletBtn = document.getElementById('connect-wallet-btn');
 
-        const onAnnounceProvider = (event) => { if (!discoveredProviders.some(p => p.info.uuid === event.detail.info.uuid)) discoveredProviders.push(event.detail); };
-        const populateWalletSelector = () => { walletListEl.innerHTML = ''; if (discoveredProviders.length === 0) { walletListEl.innerHTML = `<p class="text-gray-400">No wallet extensions found. Please install one and refresh the page.</p>`; return; } discoveredProviders.forEach(providerDetail => { const li = document.createElement('li'); const button = document.createElement('button'); button.className = "w-full text-left flex items-center gap-4 p-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"; button.innerHTML = `<img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-8 h-8 rounded-full"> <span class="font-medium">${providerDetail.info.name}</span>`; button.onclick = () => { hideModal('selectWalletModal'); connectWallet(providerDetail.provider); }; li.appendChild(button); walletListEl.appendChild(li); }); };
-        const isWalletConnected = async (provider) => { if (!provider) return false; try { const accounts = await provider.request({ method: 'eth_accounts' }); return accounts.length > 0; } catch (e) { return false; } };
-
-        const showTxStatus = (msg) => { document.getElementById('tx-status-text').textContent = msg; document.getElementById('tx-status').classList.remove('hidden'); };
-        const hideTxStatus = () => { document.getElementById('tx-status').classList.add('hidden'); };
-
-        const initializeApp = async (accounts) => {
-            try {
-                if (!accounts || accounts.length === 0) return disconnectWallet();
-                provider = new ethers.providers.Web3Provider(selectedProvider, "any");
-                const network = await provider.getNetwork();
-                if (network.chainId !== MONAD_TESTNET_CHAIN_ID_DEC) return showModal('wrongNetworkModal');
-                hideModal('wrongNetworkModal');
-                signer = provider.getSigner();
-                userAddress = await signer.getAddress();
-                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                document.getElementById('wallet-address').textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
-                document.getElementById('app').classList.remove('hidden');
-                document.getElementById('mobile-header').classList.remove('hidden');
-                document.getElementById('connect-screen').style.display = 'none';
-                selectedProvider.on('accountsChanged', (accounts) => initializeApp(accounts));
-                selectedProvider.on('chainChanged', () => window.location.reload());
-                await fetchAllDataFromChain();
-            } catch (error) {
-                console.error('initializeApp error', error);
-                showToast(getErrorMessage(error), 'error');
-            }
+        const connectWalletBtn = document.getElementById('connectWalletBtn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const walletInfoEl = document.getElementById('wallet-info');
+        const walletAddressEl = document.getElementById('wallet-address');
+        const appContentEl = document.getElementById('app-content');
+        
+        const showTxStatus = (msg) => { document.getElementById('tx-status-text').textContent = msg; document.getElementById('tx-status').classList.remove('hidden'); document.getElementById('tx-status').classList.add('flex'); };
+        const hideTxStatus = () => { document.getElementById('tx-status').classList.add('hidden'); document.getElementById('tx-status').classList.remove('flex'); };
+        const showToast = (message, isError = false) => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.className = `toast p-3 rounded-lg shadow-lg text-white ${isError ? 'bg-red-600' : 'bg-green-600'}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3000);
+        };
+        const getErrorMessage = (error) => {
+            if (error.code === 4001) return 'Transaction rejected by user.';
+            return error.reason || error.data?.message || error.message || 'An unknown error occurred.';
         };
 
-        const connectWallet = async (providerParam) => {
-            selectedProvider = providerParam;
-            if (!selectedProvider) return showToast('Could not find the selected wallet provider.', 'error');
-            setButtonLoading(connectWalletBtn, true);
+        const onAnnounceProvider = (event) => { if (!discoveredProviders.some(p => p.info.uuid === event.detail.info.uuid)) discoveredProviders.push(event.detail); };
+        
+        const connectWallet = async (providerDetail) => {
+            selectedProvider = providerDetail.provider;
             try {
                 const accounts = await selectedProvider.request({ method: 'eth_requestAccounts' });
                 await initializeApp(accounts);
-                showToast('Wallet connected successfully!', 'success');
-            } catch (error) {
-                console.error("Failed to connect wallet:", error);
-                if (error.code === 4001) showToast('Connection request rejected by user.', 'error');
-                else showToast(getErrorMessage(error), 'error');
-            } finally {
-                setButtonLoading(connectWalletBtn, false);
+            } catch (error) { showToast(getErrorMessage(error), true); }
+        };
+        
+        const initializeApp = async (accounts) => {
+            if (accounts.length === 0) return disconnect();
+            provider = new ethers.providers.Web3Provider(selectedProvider, "any");
+            const network = await provider.getNetwork();
+            if (network.chainId !== MONAD_TESTNET_CHAIN_ID_DEC) {
+                document.getElementById('wrongNetworkModal').classList.remove('hidden');
+                document.getElementById('wrongNetworkModal').classList.add('flex');
+                return;
             }
+            signer = await provider.getSigner();
+            userAddress = await signer.getAddress();
+            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+            connectWalletBtn.classList.add('hidden');
+            walletInfoEl.classList.remove('hidden');
+            walletInfoEl.classList.add('flex');
+            walletAddressEl.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+            appContentEl.classList.remove('hidden');
+            selectedProvider.on('accountsChanged', () => window.location.reload());
+            selectedProvider.on('chainChanged', () => window.location.reload());
+            await refreshUI();
         };
 
-        const disconnectWallet = () => { provider = signer = contract = userAddress = selectedProvider = null; document.getElementById('app').classList.add('hidden'); document.getElementById('mobile-header').classList.add('hidden'); document.getElementById('connect-screen').style.display = 'flex'; };
+        const disconnect = () => {
+            provider = signer = contract = userAddress = selectedProvider = null;
+            connectWalletBtn.classList.remove('hidden');
+            walletInfoEl.classList.add('hidden');
+            appContentEl.classList.add('hidden');
+        };
 
         const switchNetwork = async () => {
-            if (!selectedProvider) return showToast('Wallet not connected.', 'error');
             try {
-                await selectedProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: MONAD_TESTNET_CHAIN_ID_HEX }], });
-            } catch (switchError) {
-                if (switchError && switchError.code === 4902) {
-                    try { await selectedProvider.request({ method: 'wallet_addEthereumChain', params: [MONAD_TESTNET_PARAMS] }); }
-                    catch (addError) { showToast('Failed to add Monad Testnet.', 'error'); }
-                } else if (switchError && switchError.code === 4001) {
-                    showToast('Network switch rejected by user.', 'error');
-                } else { showToast('Failed to switch network.', 'error'); }
-            }
+                await selectedProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: MONAD_TESTNET_CHAIN_ID_HEX }] });
+            } catch(e) { showToast("Failed to switch network.", true); }
         };
 
-        const fetchBalance = async () => {
-            try {
-                if (!provider || !userAddress) return;
-                const balance = await provider.getBalance(userAddress);
-                document.getElementById('wallet-balance').textContent = ethers.utils.formatEther(balance);
-            } catch (error) { console.error('fetchBalance error', error); }
-        };
-
-        const fetchAllDataFromChain = async () => {
+        const refreshUI = async () => {
             if (!contract) return;
             try {
-                const [guardians, allowance] = await Promise.all([ contract.getGuardians(), contract.getAllowance() ]);
-                currentGuardians = guardians.map(g => g.toLowerCase());
-                updateUI(guardians, allowance);
-                cacheData(guardians, allowance.toString());
-                await fetchBalance();
-            } catch (error) {
-                console.error("Error fetching data from chain:", error);
-                showToast('Could not fetch account data.', 'error');
-                // Try to load from cache to avoid blank UI
-                loadCache();
-            }
+                const [guardians, allowance, spent, balance, recVotes, propOwner] = await Promise.all([
+                    contract.getGuardians(), contract.getAllowance(), contract.getSpentToday(),
+                    provider.getBalance(userAddress), contract.getRecoveryVoteCount(), contract.getProposedNewOwner()
+                ]);
+
+                const guardianList = document.getElementById("guardianList");
+                guardianList.innerHTML = "";
+                if (guardians.length === 0) {
+                    guardianList.innerHTML = `<p class="text-sm text-center text-gray-400">No guardians added yet.</p>`;
+                } else {
+                    guardians.forEach(g => {
+                        const li = document.createElement("li");
+                        li.className = "flex justify-between items-center bg-neutral-800/50 p-2 rounded-lg";
+                        li.innerHTML = `<span class="font-mono text-xs md:text-sm">${g}</span><button data-addr="${g}" class="remove-guardian-btn text-red-400 hover:text-red-500 text-xs font-semibold">REMOVE</button>`;
+                        guardianList.appendChild(li);
+                    });
+                }
+
+                const allowanceLimit = parseFloat(ethers.utils.formatEther(allowance));
+                const spentToday = parseFloat(ethers.utils.formatEther(spent));
+                document.getElementById('allowance-limit').textContent = `${allowanceLimit} MON`;
+                document.getElementById('spent-today').textContent = `${spentToday.toFixed(4)} MON`;
+                document.getElementById('spend-progress-bar').style.width = `${allowanceLimit > 0 ? (spentToday / allowanceLimit) * 100 : 0}%`;
+                
+                document.getElementById('wallet-balance').textContent = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
+
+                document.getElementById('recovery-votes').textContent = recVotes.toString();
+                const propOwnerEl = document.getElementById('proposed-owner-text');
+                if (propOwner && propOwner !== ethers.constants.AddressZero) {
+                    propOwnerEl.textContent = `Proposed: ${propOwner.substring(0, 6)}...`;
+                    propOwnerEl.classList.remove('hidden');
+                } else {
+                    propOwnerEl.classList.add('hidden');
+                }
+            } catch (e) { showToast("Failed to load contract data.", true); console.error(e); }
         };
 
-        const handleAddGuardian = async () => {
-            const guardianAddress = document.getElementById('guardian-address-input').value.trim();
-            if (!ethers.utils.isAddress(guardianAddress)) return showToast('Invalid guardian address format.', 'error');
-            if (!userAddress) return showToast('Wallet not connected.', 'error');
-            if (guardianAddress.toLowerCase() === userAddress.toLowerCase()) return showToast('You cannot add yourself as guardian.', 'error');
-            if (currentGuardians.includes(guardianAddress.toLowerCase())) return showToast('Guardian already added.', 'error');
-
-            setButtonLoading(document.getElementById('add-guardian-btn'), true, 'Adding...');
+        const handleTx = async (txPromise, successMsg) => {
+            showTxStatus("Sending transaction...");
             try {
-                const tx = await contract.addGuardian(guardianAddress);
-                showTxStatus('Sending transaction to add guardian...');
-                await tx.wait();
-                showToast('Guardian added successfully!', 'success');
-                hideModal('addGuardianModal');
-                await fetchAllDataFromChain();
+                const tx = await txPromise;
+                showTxStatus("Waiting for confirmation...");
+                const receipt = await tx.wait();
+                showToast(successMsg);
+                await refreshUI();
+                return receipt;
             } catch (error) {
-                console.error("Add guardian error:", error);
-                showToast(getErrorMessage(error), 'error');
+                showToast(getErrorMessage(error), true);
             } finally {
-                setButtonLoading(document.getElementById('add-guardian-btn'), false, 'Add Guardian');
                 hideTxStatus();
             }
         };
 
-        const handleRemoveGuardian = async (targetElement, guardianAddress) => {
-            targetElement.classList.add('item-removing');
-            try {
-                const tx = await contract.removeGuardian(guardianAddress);
-                showTxStatus('Sending transaction to remove guardian...');
-                await tx.wait();
-                showToast('Guardian removed successfully!', 'success');
-                await fetchAllDataFromChain();
-            } catch (error) {
-                console.error("Remove guardian error:", error);
-                showToast(getErrorMessage(error), 'error');
-                targetElement.classList.remove('item-removing');
-            } finally {
-                hideTxStatus();
-            }
-        };
-
-        const handleSetAllowance = async () => {
-            const amount = document.getElementById('allowance-amount').value;
-            if (isNaN(amount) || amount === '' || parseFloat(amount) < 0) return showToast('Invalid allowance amount.', 'error');
-            setButtonLoading(document.getElementById('save-allowance-btn'), true, 'Saving...');
-            try {
-                const amountInt = ethers.BigNumber.from(String(Math.floor(parseFloat(amount))));
-                const tx = await contract.setAllowance(amountInt);
-                showTxStatus('Sending transaction to set allowance...');
-                await tx.wait();
-                showToast('Allowance updated successfully!', 'success');
-                await fetchAllDataFromChain();
-            } catch (error) {
-                console.error("Set allowance error:", error);
-                showToast(getErrorMessage(error), 'error');
-            } finally {
-                setButtonLoading(document.getElementById('save-allowance-btn'), false, 'Save New Limit');
-                hideTxStatus();
-            }
-        };
-
-        const updateUI = (guardians, allowance) => {
-            const guardianCount = guardians.length, totalGuardians = 5;
-            document.getElementById('guardian-summary').textContent = `${guardianCount} out of ${totalGuardians}`;
-            document.getElementById('guardian-progress').style.width = `${(guardianCount / totalGuardians) * 100}%`;
-            document.getElementById('allowance-summary').textContent = `$${allowance.toString()}.00`;
-            const guardianListEl = document.getElementById('guardian-list');
-            guardianListEl.innerHTML = '';
-            document.getElementById('guardian-page-title').textContent = `Your Guardians (${guardians.length}/5)`;
-            if (guardians.length === 0) {
-                guardianListEl.innerHTML = `<li class="p-6 text-center text-gray-400 flex flex-col items-center gap-4"><i class="fa-solid fa-user-plus text-4xl text-gray-600"></i><span>No guardians added yet. Add one to get started.</span><button id="add-first-guardian" class="bg-violet-500 w-full sm:w-auto hover:bg-violet-600 transition-colors font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i><span>Add First Guardian</span></button></li>`;
-            } else {
-                guardians.forEach((address, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'p-6 flex justify-between items-center transition-opacity duration-300';
-                    li.innerHTML = `<div class="flex items-center gap-4"><i class="fa-solid fa-user-shield text-violet-400 text-2xl"></i><div><p class="font-semibold">Guardian #${index + 1}</p><p class="font-mono text-sm text-gray-400">${address}</p></div></div><button class="text-red-400 hover:text-red-300 remove-guardian-btn" data-address="${address}" title="Remove Guardian"><i class="fa-solid fa-trash"></i></button>`;
-                    guardianListEl.appendChild(li);
-                });
-            }
-            document.getElementById('allowance-amount').value = allowance.toString();
-        };
-
-        const setButtonLoading = (button, isLoading, loadingText = '...') => {
-            if (!button) return;
-            if (isLoading) {
-                button.disabled = true;
-                button.dataset.originalText = button.innerHTML;
-                button.innerHTML = `<div class="loader"></div><span class="ml-2">${loadingText}</span>`;
-            } else {
-                button.disabled = false;
-                button.innerHTML = button.dataset.originalText || 'Submit';
-            }
-        };
-
-        const toggleSidebar = () => document.getElementById('sidebar').classList.toggle('-translate-x-full');
-        window.navigateTo = (pageId) => { document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === pageId)); document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.dataset.page === pageId)); window.location.hash = pageId; if (window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) toggleSidebar(); };
-        window.showModal = (modalId) => { const modal = document.getElementById(modalId); if(!modal) return; modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { modal.querySelector('.modal-backdrop')?.classList.add('opacity-100'); modal.querySelector('.modal-content')?.classList.remove('scale-95', 'opacity-0'); }, 10); };
-        window.hideModal = (modalId) => { const modal = document.getElementById(modalId); if(!modal) return; modal.querySelector('.modal-backdrop')?.classList.remove('opacity-100'); modal.querySelector('.modal-content')?.classList.add('scale-95', 'opacity-0'); if (modalId === 'addGuardianModal') document.getElementById('guardian-address-input').value = ''; setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300); };
-
-        const showToast = (message, type = 'success') => { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' }; toast.className = `toast text-white py-2 px-4 rounded-lg shadow-lg mb-2 ${colors[type]}`; toast.textContent = message; container.appendChild(toast); setTimeout(() => toast.classList.add('show'), 10); setTimeout(() => { toast.classList.remove('show'); setTimeout(() => container.removeChild(toast), 500); }, 4000); };
-        const getErrorMessage = (error) => { try { if (!error) return 'An unknown error occurred.'; if (error.reason) return error.reason; if (error.data && error.data.message) return error.data.message; if (error.message) return error.message; return JSON.stringify(error); } catch(e){ return 'An unknown error occurred.'; } };
-
-        const setupEventListeners = () => {
-            document.getElementById('connect-wallet-btn').addEventListener('click', () => { populateWalletSelector(); showModal('selectWalletModal'); });
-            document.getElementById('disconnect-btn').addEventListener('click', disconnectWallet);
-            document.getElementById('switch-network-btn').addEventListener('click', switchNetwork);
-            document.getElementById('hamburger-btn').addEventListener('click', toggleSidebar);
-            document.getElementById('close-sidebar-btn').addEventListener('click', toggleSidebar);
-            document.getElementById('add-guardian-btn').addEventListener('click', handleAddGuardian);
-            document.getElementById('save-allowance-btn').addEventListener('click', handleSetAllowance);
-            document.getElementById('guardian-list').addEventListener('click', (e) => { const removeBtn = e.target.closest('.remove-guardian-btn'); if (removeBtn) { const listItem = removeBtn.closest('li'); handleRemoveGuardian(listItem, removeBtn.dataset.address); } const addFirst = e.target.closest('#add-first-guardian'); if(addFirst){ showModal('addGuardianModal'); } });
-            document.querySelectorAll('.sidebar-link').forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); navigateTo(link.dataset.page); }); });
-            document.getElementById('open-add-guardian').addEventListener('click', () => showModal('addGuardianModal'));
-            document.getElementById('cancel-add-guardian').addEventListener('click', () => hideModal('addGuardianModal'));
-            document.getElementById('close-select-wallet').addEventListener('click', () => hideModal('selectWalletModal'));
-            document.getElementById('manage-guardians-btn').addEventListener('click', () => navigateTo('guardians'));
-            document.getElementById('manage-allowance-btn').addEventListener('click', () => navigateTo('allowances'));
-            document.getElementById('initiate-recovery-side').addEventListener('click', () => showModal('initiateRecoveryModal'));
-        };
-
-        const cacheData = (guardians, allowance) => { try { localStorage.setItem('guardianData', JSON.stringify({ guardians, allowance })); } catch(e) { /* ignore */ } };
-        const loadCache = () => { try { const cache = JSON.parse(localStorage.getItem('guardianData') || '{}'); if (cache.guardians) updateUI(cache.guardians, cache.allowance); } catch(e){ /* ignore */ } };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const initialPage = window.location.hash.substring(1) || 'dashboard';
-            navigateTo(initialPage);
-            setupEventListeners();
+        window.addEventListener('load', () => {
             window.addEventListener('eip6963:announceProvider', onAnnounceProvider);
             window.dispatchEvent(new Event('eip6963:requestProvider'));
-            // load cache immediately so UI isn't empty
-            loadCache();
+            
             setTimeout(async () => {
-                const anyProvider = discoveredProviders.find(p=>p.info.name.toLowerCase().includes("metamask"))?.provider || discoveredProviders[0]?.provider || window.ethereum;
-                if (anyProvider && await isWalletConnected(anyProvider)) {
-                    try { selectedProvider = anyProvider; const accounts = await selectedProvider.request({ method: 'eth_accounts' }); initializeApp(accounts); } catch(e){ console.warn('autoconnect failed', e); }
+                const providerDetail = discoveredProviders.find(p => p.info.rdns === "io.metamask") || discoveredProviders[0];
+                if (providerDetail) {
+                    const accounts = await providerDetail.provider.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        selectedProvider = providerDetail.provider;
+                        initializeApp(accounts);
+                    }
                 }
-            }, 200);
+            }, 300);
+
+            connectWalletBtn.addEventListener('click', () => {
+                const modal = document.getElementById('select-wallet-modal');
+                const list = document.getElementById('wallet-list');
+                list.innerHTML = '';
+                if(discoveredProviders.length === 0) {
+                    list.innerHTML = `<p class="text-gray-400">No wallet extensions detected.</p>`;
+                }
+                discoveredProviders.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left flex items-center gap-4 p-3 rounded-lg bg-neutral-700 hover:bg-neutral-600";
+                    btn.innerHTML = `<img src="${p.info.icon}" alt="${p.info.name}" class="w-8 h-8 rounded-full"><span>${p.info.name}</span>`;
+                    btn.onclick = () => { modal.classList.add('hidden'); connectWallet(p); };
+                    list.appendChild(btn);
+                });
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            });
+
+            document.getElementById('close-wallet-modal').onclick = () => document.getElementById('select-wallet-modal').classList.add('hidden');
+            document.getElementById('switch-network-btn').onclick = switchNetwork;
+            disconnectBtn.addEventListener('click', disconnect);
+            document.getElementById('addGuardianBtn').addEventListener('click', () => { const addr = document.getElementById('guardianAddress').value; if(ethers.utils.isAddress(addr)) { handleTx(contract.addGuardian(addr), "Guardian Added!"); document.getElementById('guardianAddress').value = ''; } else { showToast("Invalid address", true); }});
+            document.getElementById('guardianList').addEventListener('click', (e) => { if (e.target.classList.contains('remove-guardian-btn')) { const addr = e.target.dataset.addr; if(confirm(`Remove guardian ${addr}?`)) { handleTx(contract.removeGuardian(addr), "Guardian Removed!"); } } });
+            document.getElementById('setAllowanceBtn').addEventListener('click', () => { const amt = document.getElementById('allowanceInput').value; if(parseFloat(amt) >= 0) { handleTx(contract.setAllowance(ethers.utils.parseEther(amt)), "Allowance Set!"); } else { showToast("Invalid amount", true); } });
+            document.getElementById('spendBtn').addEventListener('click', () => { const to = document.getElementById('spendTo').value; const amt = document.getElementById('spendAmount').value; if(ethers.utils.isAddress(to) && parseFloat(amt) > 0) { handleTx(contract.spend(to, ethers.utils.parseEther(amt)), "Spend Successful!"); } else { showToast("Invalid recipient or amount", true); } });
+            document.getElementById('voteRecoveryBtn').addEventListener('click', () => { const addr = document.getElementById('recoveryAddress').value; if(ethers.utils.isAddress(addr)) { handleTx(contract.approveRecovery(addr), "Recovery Vote Submitted!"); } else { showToast("Invalid address", true); } });
+            document.getElementById('cancelRecoveryBtn').addEventListener('click', () => { handleTx(contract.cancelRecovery(), "Recovery Cancelled!"); });
         });
     </script>
 </body>
 </html>
+

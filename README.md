@@ -9,8 +9,8 @@ This hackathon submission focuses on a core, fully-functional MVP:
 * **Guardian Management:** Users can add and remove trusted "guardian" addresses. These guardians are the foundation for social recovery, allowing users to regain access to their accounts if they lose their primary key.
 * **Spending Allowances:** Users can set a daily spending limit (in USD) to protect their account from unauthorized large transactions.
 * **Live on Monad Testnet:** The smart contract is deployed and verified on the Monad Testnet, and the dApp is fully interactive.
-    * **Contract Address:** `0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC`
-    * **Verified Contract on Monad Explorer:** [https://explorer.testnet.monad.xyz/address/0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC](https://explorer.testnet.monad.xyz/address/0x9F290D3D1c79B2172A3874Bf234cD467eB8F95AC)
+    * **Contract Address:** `0xd3310739AF89EceC9EE327C17243C8347e252310`
+    * **Verified Contract on Monad Explorer:** [https://explorer.testnet.monad.xyz/address/0xd3310739AF89EceC9EE327C17243C8347e252310](https://explorer.testnet.monad.xyz/address/0xd3310739AF89EceC9EE327C17243C8347e252310)
 
 ## Tech Stack
 

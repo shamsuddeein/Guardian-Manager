@@ -1,0 +1,38 @@
+$ forge script script/DeployGuardianManager.s.sol   --rpc-url $RPC_URL   --broadcast
+[⠢] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: contract GuardianManager 0xd3310739AF89EceC9EE327C17243C8347e252310
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 10143
+
+Estimated gas price: 200.000000001 gwei
+
+Estimated total gas used for script: 2850736
+
+Estimated amount required: 0.570147200002850736 ETH
+
+==========================
+
+##### 10143
+✅  [Success] Hash: 0xef2df0ee0e50fc55bf33ccd807a96be06619e08034c75af743001b9760b704b1
+Contract Address: 0xd3310739AF89EceC9EE327C17243C8347e252310
+Block: 43530678
+Paid: 0.285073600002850736 ETH (2850736 gas * 100.000000001 gwei)
+
+✅ Sequence #1 on 10143 | Total Paid: 0.285073600002850736 ETH (2850736 gas * avg 100.000000001 gwei)
+                                                                                                          
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /home/shamsuddeen/Desktop/guardian-dapp/broadcast/DeployGuardianManager.s.sol/10143/run-latest.json
+
+Sensitive values saved to: /home/shamsuddeen/Desktop/guardian-dapp/cache/DeployGuardianManager.s.sol/10143/run-latest.json
