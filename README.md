@@ -24,7 +24,7 @@ This hackathon submission focuses on a core, fully-functional MVP:
 
 1.  **Clone the repository.**
 2.  **Run a local server:** Open the `index.html` file through a local server to enable wallet connections. A simple way is to run `python3 -m http.server` in the project directory.
-3.  **Connect your wallet:** Open [http://localhost:8000](http://localhost:8000) in your browser and make sure your wallet is connected to the Monad Testnet.
+3.  **Connect your wallet:** Open [https://guardian-manager.netlify.app/](https://guardian-manager.netlify.app/) in your browser and make sure your wallet is connected to the Monad Testnet.
 
 ---
 
